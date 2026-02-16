@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
+  const supabase = getSupabaseClient();
+
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +46,8 @@ export default function LoginPage() {
               setLoading(true);
               setError(null);
               try {
+                if (!supabase) throw new Error("Supabase env vars 未設定，請先設定 Vercel 環境變數並 redeploy");
+
                 const e = email.trim();
                 if (!e) throw new Error("請輸入 Email");
 

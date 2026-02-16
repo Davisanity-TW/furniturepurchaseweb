@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Item, ItemStatus, Room } from "@/lib/types";
-import { ADMIN_USER_ID, supabase } from "@/lib/supabaseClient";
+import { ADMIN_USER_ID, getSupabaseClient } from "@/lib/supabaseClient";
 
 const ROOMS: Room[] = ["客廳", "廚房", "電腦房", "小房間", "主臥室", "浴室"];
 const STATUSES: { value: ItemStatus; label: string }[] = [
@@ -43,9 +43,21 @@ export default function ItemsApp() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
+  const supabase = useMemo(() => getSupabaseClient(), []);
+
   async function refresh() {
     setLoading(true);
     setError(null);
+
+    if (!supabase) {
+      setError(
+        "Missing Supabase env vars. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel and redeploy.",
+      );
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("items")
       .select("*")
@@ -63,6 +75,8 @@ export default function ItemsApp() {
   }
 
   useEffect(() => {
+    if (!supabase) return;
+
     // session init
     supabase.auth.getSession().then(({ data }) => {
       setUserId(data.session?.user?.id ?? null);
@@ -75,7 +89,7 @@ export default function ItemsApp() {
     return () => {
       sub.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     refresh();
@@ -116,6 +130,7 @@ export default function ItemsApp() {
   }, [filtered]);
 
   async function signOut() {
+    if (!supabase) return;
     await supabase.auth.signOut();
   }
 
@@ -125,6 +140,7 @@ export default function ItemsApp() {
       return;
     }
 
+    if (!supabase) return;
     const { error } = await supabase.from("items").upsert(payload).select();
     if (error) {
       alert(error.message);
@@ -138,6 +154,7 @@ export default function ItemsApp() {
   async function deleteItem(id: string) {
     if (!isAdmin) return;
     if (!confirm("確定要刪除？")) return;
+    if (!supabase) return;
     const { error } = await supabase.from("items").delete().eq("id", id);
     if (error) {
       alert(error.message);

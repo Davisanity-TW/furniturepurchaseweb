@@ -20,6 +20,7 @@ export type Item = {
   url: string | null;
   note: string | null;
   status: ItemStatus;
+  image_path: string | null;
   purchased_at: string | null;
   created_at: string;
   updated_at: string;

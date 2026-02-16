@@ -42,6 +42,7 @@ export default function ItemsApp() {
 
   const [editing, setEditing] = useState<Item | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
 
   const supabase = useMemo(() => getSupabaseClient(), []);
 
@@ -141,11 +142,41 @@ export default function ItemsApp() {
     }
 
     if (!supabase) return;
-    const { error } = await supabase.from("items").upsert(payload).select();
+
+    // 1) Upload image first (optional)
+    let image_path: string | null | undefined = payload.image_path as any;
+    if (pendingImageFile) {
+      const ext = pendingImageFile.name.split(".").pop() || "jpg";
+      const path = `${crypto.randomUUID()}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("item-images")
+        .upload(path, pendingImageFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: pendingImageFile.type || undefined,
+        });
+
+      if (upErr) {
+        alert(`圖片上傳失敗：${upErr.message}`);
+        return;
+      }
+
+      image_path = path;
+    }
+
+    // 2) Upsert item row
+    const { error } = await supabase
+      .from("items")
+      .upsert({ ...payload, image_path })
+      .select();
+
     if (error) {
       alert(error.message);
       return;
     }
+
+    setPendingImageFile(null);
     setEditing(null);
     setIsCreating(false);
     await refresh();
@@ -329,6 +360,7 @@ export default function ItemsApp() {
                     <table className="min-w-full text-sm">
                       <thead className="text-left text-xs text-slate-500">
                         <tr className="border-b">
+                          <th className="py-2 pr-4">圖片</th>
                           <th className="py-2 pr-4">類別</th>
                           <th className="py-2 pr-4">品名</th>
                           <th className="py-2 pr-4">品牌/型號</th>
@@ -341,6 +373,22 @@ export default function ItemsApp() {
                       <tbody>
                         {list.map((i) => (
                           <tr key={i.id} className="border-b last:border-b-0">
+                            <td className="py-2 pr-4">
+                              {supabase && i.image_path ? (
+                                <img
+                                  src={
+                                    supabase.storage
+                                      .from("item-images")
+                                      .getPublicUrl(i.image_path).data.publicUrl
+                                  }
+                                  alt={i.name}
+                                  className="h-10 w-10 rounded object-cover border"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="h-10 w-10 rounded border bg-slate-50" />
+                              )}
+                            </td>
                             <td className="py-2 pr-4 whitespace-nowrap text-slate-700">
                               {i.category}
                             </td>
@@ -405,9 +453,11 @@ export default function ItemsApp() {
         <EditDialog
           item={editing}
           onClose={() => {
+            setPendingImageFile(null);
             setEditing(null);
             setIsCreating(false);
           }}
+          onPickImage={(file) => setPendingImageFile(file)}
           onSave={upsertItem}
         />
       )}
@@ -422,10 +472,12 @@ export default function ItemsApp() {
 function EditDialog({
   item,
   onClose,
+  onPickImage,
   onSave,
 }: {
   item: Item | null;
   onClose: () => void;
+  onPickImage: (file: File | null) => void;
   onSave: (payload: Partial<Item> & { id?: string }) => void;
 }) {
   const [form, setForm] = useState<Partial<Item>>(() =>
@@ -544,6 +596,21 @@ function EditDialog({
               className="w-full rounded-md border px-3 py-2 text-sm"
               placeholder="https://..."
             />
+          </Field>
+
+          <Field label="圖片（上傳）" className="sm:col-span-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                onPickImage(file);
+              }}
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            />
+            <div className="mt-1 text-xs text-slate-500">
+              會上傳到 Supabase Storage（bucket: item-images）。
+            </div>
           </Field>
 
           <Field label="說明/備註" className="sm:col-span-2">

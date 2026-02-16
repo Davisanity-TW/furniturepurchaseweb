@@ -115,7 +115,7 @@ export default function ItemsApp() {
       .filter((i) => (filterCategory ? i.category === filterCategory : true))
       .filter((i) => {
         if (!q) return true;
-        const hay = `${i.name} ${i.brand ?? ""} ${i.model ?? ""}`.toLowerCase();
+        const hay = `${i.name} ${i.category} ${i.brand ?? ""} ${i.model ?? ""}`.toLowerCase();
         return hay.includes(q);
       });
   }, [items, query, filterRoom, filterStatus, filterCategory]);

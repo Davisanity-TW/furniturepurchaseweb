@@ -498,20 +498,21 @@ function EditDialog({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold">{item ? "編輯項目" : "新增項目"}</h3>
-          <button
-            onClick={onClose}
-            className="rounded-md border px-2 py-1 text-sm hover:bg-slate-50"
-          >
-            關閉
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+      <div className="mx-auto flex min-h-full items-start justify-center">
+        <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg max-h-[90vh] overflow-y-auto">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-base font-semibold">{item ? "編輯項目" : "新增項目"}</h3>
+            <button
+              onClick={onClose}
+              className="rounded-md border px-2 py-1 text-sm hover:bg-slate-50"
+            >
+              關閉
+            </button>
+          </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="品名" required>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="品名" required>
             <input
               value={form.name ?? ""}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -621,10 +622,10 @@ function EditDialog({
               rows={4}
             />
           </Field>
-        </div>
+          </div>
 
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <button
             onClick={onClose}
             className="rounded-md border bg-white px-3 py-2 text-sm hover:bg-slate-50"
           >
@@ -661,6 +662,7 @@ function EditDialog({
           >
             儲存
           </button>
+          </div>
         </div>
       </div>
     </div>

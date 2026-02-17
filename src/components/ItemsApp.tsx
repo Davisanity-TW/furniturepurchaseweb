@@ -402,10 +402,24 @@ export default function ItemsApp() {
                           <tr key={i.id} className="border-b last:border-b-0">
                             <td className="py-2 pr-4">
                               {supabase && i.image_path ? (
-                                <button
-                                  type="button"
-                                  className="block"
-                                  onClick={() => {
+                                <a
+                                  href={
+                                    supabase.storage
+                                      .from("item-images")
+                                      .getPublicUrl(i.image_path).data.publicUrl
+                                  }
+                                  className="block cursor-zoom-in touch-manipulation"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    const url =
+                                      supabase.storage
+                                        .from("item-images")
+                                        .getPublicUrl(i.image_path!).data.publicUrl;
+                                    setPreviewImage({ url, alt: i.name });
+                                  }}
+                                  onTouchEnd={(e) => {
+                                    // iOS Safari sometimes fails to trigger click on small elements inside tables.
+                                    e.preventDefault();
                                     const url =
                                       supabase.storage
                                         .from("item-images")
@@ -423,7 +437,7 @@ export default function ItemsApp() {
                                     className="h-10 w-10 rounded object-cover border"
                                     loading="lazy"
                                   />
-                                </button>
+                                </a>
                               ) : (
                                 <div className="h-10 w-10 rounded border bg-slate-50" />
                               )}
@@ -541,6 +555,7 @@ export default function ItemsApp() {
             <div
               className="w-full max-w-4xl rounded-xl bg-white p-3 shadow-lg max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-2 pb-2">
                 <div className="text-sm font-medium text-slate-800">{previewImage.alt}</div>

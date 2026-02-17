@@ -43,6 +43,7 @@ export default function ItemsApp() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ url: string; alt: string } | null>(null);
 
   const supabase = useMemo(() => getSupabaseClient(), []);
 
@@ -375,16 +376,28 @@ export default function ItemsApp() {
                           <tr key={i.id} className="border-b last:border-b-0">
                             <td className="py-2 pr-4">
                               {supabase && i.image_path ? (
-                                <img
-                                  src={
-                                    supabase.storage
-                                      .from("item-images")
-                                      .getPublicUrl(i.image_path).data.publicUrl
-                                  }
-                                  alt={i.name}
-                                  className="h-10 w-10 rounded object-cover border"
-                                  loading="lazy"
-                                />
+                                <button
+                                  type="button"
+                                  className="block"
+                                  onClick={() => {
+                                    const url =
+                                      supabase.storage
+                                        .from("item-images")
+                                        .getPublicUrl(i.image_path!).data.publicUrl;
+                                    setPreviewImage({ url, alt: i.name });
+                                  }}
+                                >
+                                  <img
+                                    src={
+                                      supabase.storage
+                                        .from("item-images")
+                                        .getPublicUrl(i.image_path).data.publicUrl
+                                    }
+                                    alt={i.name}
+                                    className="h-10 w-10 rounded object-cover border"
+                                    loading="lazy"
+                                  />
+                                </button>
                               ) : (
                                 <div className="h-10 w-10 rounded border bg-slate-50" />
                               )}
@@ -465,6 +478,40 @@ export default function ItemsApp() {
       <div className="mt-10 text-xs text-slate-500">
         Tips：如果你看到資料全空/報錯，通常是 items table/RLS 還沒建立，或 Vercel env vars 還沒設。
       </div>
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-4"
+          onClick={() => setPreviewImage(null)}
+          role="dialog"
+          aria-label="image preview"
+        >
+          <div className="mx-auto flex min-h-full items-start justify-center">
+            <div
+              className="w-full max-w-4xl rounded-xl bg-white p-3 shadow-lg max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-2 pb-2">
+                <div className="text-sm font-medium text-slate-800">{previewImage.alt}</div>
+                <button
+                  className="rounded-md border bg-white px-2 py-1 text-sm hover:bg-slate-50"
+                  onClick={() => setPreviewImage(null)}
+                >
+                  關閉
+                </button>
+              </div>
+              <div className="px-2 pb-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewImage.url}
+                  alt={previewImage.alt}
+                  className="h-auto w-full rounded-md object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

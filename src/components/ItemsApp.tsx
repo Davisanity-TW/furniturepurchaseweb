@@ -16,6 +16,20 @@ function statusLabel(s: ItemStatus) {
   return STATUSES.find((x) => x.value === s)?.label ?? s;
 }
 
+function statusClass(s: ItemStatus) {
+  switch (s) {
+    case "candidate":
+    case "want":
+      return "bg-sky-100 text-sky-800"; // 淺藍
+    case "decided":
+      return "bg-emerald-100 text-emerald-800"; // 淺綠
+    case "purchased":
+      return "bg-emerald-700 text-white"; // 深綠
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+}
+
 function fmtPrice(price: number | null, currency: string) {
   if (price == null) return "—";
   try {
@@ -425,7 +439,9 @@ export default function ItemsApp() {
                               {fmtPrice(i.price, i.currency)}
                             </td>
                             <td className="py-2 pr-4 whitespace-nowrap">
-                              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                              <span
+                                className={`rounded-full px-2 py-1 text-xs ${statusClass(i.status)}`}
+                              >
                                 {statusLabel(i.status)}
                               </span>
                             </td>

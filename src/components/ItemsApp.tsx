@@ -6,10 +6,10 @@ import { ADMIN_USER_ID, getSupabaseClient } from "@/lib/supabaseClient";
 
 const ROOMS: Room[] = ["客廳", "廚房", "電腦房", "小房間", "主臥室", "浴室"];
 const STATUSES: { value: ItemStatus; label: string }[] = [
-  { value: "want", label: "想買" },
   { value: "candidate", label: "候選" },
+  { value: "want", label: "想買" },
+  { value: "decided", label: "已決定" },
   { value: "purchased", label: "已購買" },
-  { value: "eliminated", label: "已淘汰" },
 ];
 
 function statusLabel(s: ItemStatus) {
@@ -493,7 +493,7 @@ function EditDialog({
           currency: "TWD",
           url: "",
           note: "",
-          status: "want" as ItemStatus,
+          status: "candidate" as ItemStatus,
         },
   );
 

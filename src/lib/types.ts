@@ -1,4 +1,4 @@
-export type ItemStatus = "want" | "candidate" | "purchased" | "eliminated";
+export type ItemStatus = "candidate" | "want" | "decided" | "purchased";
 
 export type Room =
   | "客廳"

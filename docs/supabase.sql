@@ -13,7 +13,7 @@ create table if not exists public.items (
   currency text not null default 'TWD',
   url text,
   note text,
-  status text not null default 'want',
+  status text not null default 'candidate',
   purchased_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -25,7 +25,7 @@ alter table public.items
 
 alter table public.items
   add constraint items_status_check
-  check (status in ('want', 'candidate', 'purchased', 'eliminated'));
+  check (status in ('candidate', 'want', 'decided', 'purchased'));
 
 -- Optional: room constraint (can extend later)
 alter table public.items

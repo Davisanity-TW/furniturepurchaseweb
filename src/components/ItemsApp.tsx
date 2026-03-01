@@ -47,7 +47,8 @@ export default function ItemsApp() {
 
   const [query, setQuery] = useState("");
   const [filterRoom, setFilterRoom] = useState<Room | "all">("all");
-  const [filterStatuses, setFilterStatuses] = useState<ItemStatus[]>([]);
+  // null = 全部；[] = 取消全部（不顯示任何狀態，直到你勾選）
+  const [filterStatuses, setFilterStatuses] = useState<ItemStatus[] | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [sortKey, setSortKey] = useState<"updated_at" | "price">("updated_at");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
@@ -129,8 +130,11 @@ export default function ItemsApp() {
     return items
       .filter((i) => (filterRoom === "all" ? true : i.room === filterRoom))
       .filter((i) => {
-        // Multi-select statuses. If none selected (or all selected), treat as "全部".
-        if (filterStatuses.length === 0 || filterStatuses.length === STATUSES.length) return true;
+        // Multi-select statuses.
+        // - null => 全部
+        // - [] => 取消全部（不顯示任何項目，直到勾選）
+        if (filterStatuses === null) return true;
+        if (filterStatuses.length === 0) return false;
         return filterStatuses.includes(i.status);
       })
       .filter((i) => (filterCategory ? i.category === filterCategory : true))
@@ -313,52 +317,73 @@ export default function ItemsApp() {
 
         <div>
           <label className="text-xs text-slate-600">狀態（可複選）</label>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={filterStatuses.length === 0 || filterStatuses.length === STATUSES.length}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    // Use empty array to represent "全部" (simplifies UX)
-                    setFilterStatuses([]);
-                  }
-                }}
-              />
-              全部
-            </label>
 
-            {STATUSES.map((s) => {
-              const allChecked = filterStatuses.length === 0;
-              const checked = allChecked ? true : filterStatuses.includes(s.value);
-              return (
-                <label key={s.value} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4"
-                    checked={checked}
-                    onChange={(e) => {
-                      // When currently in "全部" mode (empty), first expand to all statuses
-                      // so toggling one will exclude/include properly.
-                      const current = allChecked ? STATUSES.map((x) => x.value) : filterStatuses;
+          <details className="relative mt-1">
+            <summary className="w-full list-none cursor-pointer select-none rounded-md border bg-white px-3 py-2 text-sm hover:bg-slate-50">
+              {(() => {
+                if (filterStatuses === null) return "全部";
+                if (filterStatuses.length === 0) return "（未選擇）";
+                return filterStatuses
+                  .map((v) => STATUSES.find((x) => x.value === v)?.label ?? v)
+                  .join("、");
+              })()}
+            </summary>
 
-                      if (e.target.checked) {
-                        const next = Array.from(new Set([...current, s.value]));
-                        // If all are selected, collapse back to "全部".
-                        if (next.length === STATUSES.length) setFilterStatuses([]);
-                        else setFilterStatuses(next);
-                      } else {
-                        const next = current.filter((x) => x !== s.value);
-                        setFilterStatuses(next);
-                      }
-                    }}
-                  />
-                  {s.label}
-                </label>
-              );
-            })}
-          </div>
+            <div className="absolute z-20 mt-2 w-full rounded-md border bg-white p-3 shadow-lg">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-md border bg-white px-2 py-1 text-xs hover:bg-slate-50"
+                  onClick={() => setFilterStatuses(null)}
+                >
+                  全部
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md border bg-white px-2 py-1 text-xs hover:bg-slate-50"
+                  onClick={() => setFilterStatuses([])}
+                >
+                  取消全部
+                </button>
+              </div>
+
+              <div className="mt-3 grid gap-2">
+                {STATUSES.map((s) => {
+                  const allMode = filterStatuses === null;
+                  const checked = allMode ? true : filterStatuses.includes(s.value);
+
+                  return (
+                    <label key={s.value} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={checked}
+                        onChange={(e) => {
+                          // If we are currently in "全部" mode, expand to a concrete list first.
+                          const current = allMode ? STATUSES.map((x) => x.value) : filterStatuses;
+
+                          if (e.target.checked) {
+                            const next = Array.from(new Set([...(current ?? []), s.value]));
+                            // If all selected -> collapse back to 全部（null）
+                            if (next.length === STATUSES.length) setFilterStatuses(null);
+                            else setFilterStatuses(next);
+                          } else {
+                            const next = (current ?? []).filter((x) => x !== s.value);
+                            setFilterStatuses(next);
+                          }
+                        }}
+                      />
+                      {s.label}
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 text-xs text-slate-500">
+                小提醒：點「取消全部」後會先不顯示任何項目，直到你勾選至少一個狀態。
+              </div>
+            </div>
+          </details>
         </div>
 
         <div>

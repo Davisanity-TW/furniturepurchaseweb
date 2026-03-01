@@ -21,7 +21,7 @@ function statusClass(s: ItemStatus) {
     case "candidate":
       return "bg-sky-100 text-sky-800"; // 淺藍（候選）
     case "want":
-      return "bg-sky-200 text-sky-900"; // 較深藍（想買）- 比候選再深一點
+      return "bg-sky-700 text-white"; // 深藍（想買）- 與「候選」拉開差距（類似 已決定 vs 已購買）
     case "decided":
       return "bg-emerald-100 text-emerald-800"; // 淺綠
     case "purchased":

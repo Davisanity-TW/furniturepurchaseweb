@@ -47,7 +47,7 @@ export default function ItemsApp() {
 
   const [query, setQuery] = useState("");
   const [filterRoom, setFilterRoom] = useState<Room | "all">("all");
-  const [filterStatus, setFilterStatus] = useState<ItemStatus | "all">("all");
+  const [filterStatuses, setFilterStatuses] = useState<ItemStatus[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [sortKey, setSortKey] = useState<"updated_at" | "price">("updated_at");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
@@ -128,14 +128,18 @@ export default function ItemsApp() {
     const q = query.trim().toLowerCase();
     return items
       .filter((i) => (filterRoom === "all" ? true : i.room === filterRoom))
-      .filter((i) => (filterStatus === "all" ? true : i.status === filterStatus))
+      .filter((i) => {
+        // Multi-select statuses. If none selected (or all selected), treat as "全部".
+        if (filterStatuses.length === 0 || filterStatuses.length === STATUSES.length) return true;
+        return filterStatuses.includes(i.status);
+      })
       .filter((i) => (filterCategory ? i.category === filterCategory : true))
       .filter((i) => {
         if (!q) return true;
         const hay = `${i.name} ${i.category} ${i.brand ?? ""} ${i.model ?? ""}`.toLowerCase();
         return hay.includes(q);
       });
-  }, [items, query, filterRoom, filterStatus, filterCategory]);
+  }, [items, query, filterRoom, filterStatuses, filterCategory]);
 
   const grouped = useMemo(() => {
     const map = new Map<Room, Item[]>();
@@ -151,6 +155,18 @@ export default function ItemsApp() {
     const totals = new Map<string, number>();
     for (const i of items) {
       if (i.status !== "decided") continue;
+      if (i.price == null) continue;
+      const c = i.currency || "TWD";
+      totals.set(c, (totals.get(c) ?? 0) + Number(i.price));
+    }
+    return totals;
+  }, [items]);
+
+  const decidedWantTotals = useMemo(() => {
+    // Sum across ALL items (not filtered): decided + want
+    const totals = new Map<string, number>();
+    for (const i of items) {
+      if (i.status !== "decided" && i.status !== "want") continue;
       if (i.price == null) continue;
       const c = i.currency || "TWD";
       totals.set(c, (totals.get(c) ?? 0) + Number(i.price));
@@ -296,19 +312,53 @@ export default function ItemsApp() {
         </div>
 
         <div>
-          <label className="text-xs text-slate-600">狀態</label>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          >
-            <option value="all">全部</option>
-            {STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+          <label className="text-xs text-slate-600">狀態（可複選）</label>
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={filterStatuses.length === 0 || filterStatuses.length === STATUSES.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    // Use empty array to represent "全部" (simplifies UX)
+                    setFilterStatuses([]);
+                  }
+                }}
+              />
+              全部
+            </label>
+
+            {STATUSES.map((s) => {
+              const allChecked = filterStatuses.length === 0;
+              const checked = allChecked ? true : filterStatuses.includes(s.value);
+              return (
+                <label key={s.value} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={checked}
+                    onChange={(e) => {
+                      // When currently in "全部" mode (empty), first expand to all statuses
+                      // so toggling one will exclude/include properly.
+                      const current = allChecked ? STATUSES.map((x) => x.value) : filterStatuses;
+
+                      if (e.target.checked) {
+                        const next = Array.from(new Set([...current, s.value]));
+                        // If all are selected, collapse back to "全部".
+                        if (next.length === STATUSES.length) setFilterStatuses([]);
+                        else setFilterStatuses(next);
+                      } else {
+                        const next = current.filter((x) => x !== s.value);
+                        setFilterStatuses(next);
+                      }
+                    }}
+                  />
+                  {s.label}
+                </label>
+              );
+            })}
+          </div>
         </div>
 
         <div>
@@ -520,22 +570,48 @@ export default function ItemsApp() {
 
       <div className="mt-10 space-y-3">
         <section className="rounded-xl border bg-white p-4 text-sm shadow-sm">
-          <div className="font-medium text-slate-800">已決定（加總）</div>
-          <div className="mt-1 text-slate-600">
-            {decidedTotals.size === 0 ? (
-              <span>目前沒有可加總的「已決定」價格（可能尚未填價格）。</span>
-            ) : (
-              <ul className="list-disc pl-5">
-                {Array.from(decidedTotals.entries()).map(([currency, total]) => (
-                  <li key={currency}>
-                    {currency} {new Intl.NumberFormat("zh-TW").format(total)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="mt-2 text-xs text-slate-500">
-            註：僅加總狀態為「已決定」且有填價格的項目。
+          <div className="font-medium text-slate-800">已決定 / 想買（加總）</div>
+
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="text-sm font-medium text-slate-800">已決定（加總）</div>
+              <div className="mt-1 text-slate-600">
+                {decidedTotals.size === 0 ? (
+                  <span>目前沒有可加總的「已決定」價格（可能尚未填價格）。</span>
+                ) : (
+                  <ul className="list-disc pl-5">
+                    {Array.from(decidedTotals.entries()).map(([currency, total]) => (
+                      <li key={currency}>
+                        {currency} {new Intl.NumberFormat("zh-TW").format(total)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                註：僅加總狀態為「已決定」且有填價格的項目。
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-slate-800">已決定 + 想買（加總）</div>
+              <div className="mt-1 text-slate-600">
+                {decidedWantTotals.size === 0 ? (
+                  <span>目前沒有可加總的「已決定 + 想買」價格（可能尚未填價格）。</span>
+                ) : (
+                  <ul className="list-disc pl-5">
+                    {Array.from(decidedWantTotals.entries()).map(([currency, total]) => (
+                      <li key={currency}>
+                        {currency} {new Intl.NumberFormat("zh-TW").format(total)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                註：僅加總狀態為「已決定 / 想買」且有填價格的項目。
+              </div>
+            </div>
           </div>
         </section>
 

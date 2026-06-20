@@ -154,11 +154,11 @@ export default function ItemsApp() {
     return map;
   }, [filtered]);
 
-  const decidedTotals = useMemo(() => {
-    // Sum across ALL items (not filtered), so you can always see the true decided budget.
+  const decidedPurchasedTotals = useMemo(() => {
+    // Sum across ALL items (not filtered), so you can always see the true committed budget.
     const totals = new Map<string, number>();
     for (const i of items) {
-      if (i.status !== "decided") continue;
+      if (i.status !== "decided" && i.status !== "purchased") continue;
       if (i.price == null) continue;
       const c = i.currency || "TWD";
       totals.set(c, (totals.get(c) ?? 0) + Number(i.price));
@@ -599,13 +599,13 @@ export default function ItemsApp() {
 
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <div>
-              <div className="text-sm font-medium text-slate-800">已決定（加總）</div>
+              <div className="text-sm font-medium text-slate-800">已決定 + 已購買（加總）</div>
               <div className="mt-1 text-slate-600">
-                {decidedTotals.size === 0 ? (
-                  <span>目前沒有可加總的「已決定」價格（可能尚未填價格）。</span>
+                {decidedPurchasedTotals.size === 0 ? (
+                  <span>目前沒有可加總的「已決定 + 已購買」價格（可能尚未填價格）。</span>
                 ) : (
                   <ul className="list-disc pl-5">
-                    {Array.from(decidedTotals.entries()).map(([currency, total]) => (
+                    {Array.from(decidedPurchasedTotals.entries()).map(([currency, total]) => (
                       <li key={currency}>
                         {currency} {new Intl.NumberFormat("zh-TW").format(total)}
                       </li>
@@ -614,7 +614,7 @@ export default function ItemsApp() {
                 )}
               </div>
               <div className="mt-2 text-xs text-slate-500">
-                註：僅加總狀態為「已決定」且有填價格的項目。
+                註：僅加總狀態為「已決定 / 已購買」且有填價格的項目。
               </div>
             </div>
 

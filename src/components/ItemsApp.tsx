@@ -6,11 +6,18 @@ import { ADMIN_USER_ID, getSupabaseClient } from "@/lib/supabaseClient";
 
 const ROOMS: Room[] = ["客廳", "廚房", "電腦房", "小房間", "主臥室", "浴室"];
 const STATUSES: { value: ItemStatus; label: string }[] = [
-  { value: "candidate", label: "候選" },
-  { value: "want", label: "想買" },
-  { value: "decided", label: "已決定" },
   { value: "purchased", label: "已購買" },
+  { value: "decided", label: "已決定" },
+  { value: "want", label: "想買" },
+  { value: "candidate", label: "候選" },
 ];
+
+const STATUS_SORT_RANK: Record<ItemStatus, number> = {
+  purchased: 0,
+  decided: 1,
+  want: 2,
+  candidate: 3,
+};
 
 function statusLabel(s: ItemStatus) {
   return STATUSES.find((x) => x.value === s)?.label ?? s;
@@ -40,6 +47,10 @@ function fmtPrice(price: number | null, currency: string) {
   }
 }
 
+function toSortDir(value: string): "desc" | "asc" {
+  return value === "asc" ? "asc" : "desc";
+}
+
 export default function ItemsApp() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +61,6 @@ export default function ItemsApp() {
   // null = 全部；[] = 取消全部（不顯示任何狀態，直到你勾選）
   const [filterStatuses, setFilterStatuses] = useState<ItemStatus[] | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("");
-  const [sortKey, setSortKey] = useState<"updated_at" | "price">("updated_at");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -79,7 +89,7 @@ export default function ItemsApp() {
     const { data, error } = await supabase
       .from("items")
       .select("*")
-      .order(sortKey, { ascending: sortDir === "asc" });
+      .order("updated_at", { ascending: sortDir === "asc" });
 
     if (error) {
       setError(error.message);
@@ -112,7 +122,7 @@ export default function ItemsApp() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortKey, sortDir]);
+  }, [sortDir]);
 
   const categories = useMemo(() => {
     const set = new Set(
@@ -151,8 +161,21 @@ export default function ItemsApp() {
     for (const i of filtered) {
       map.set(i.room, [...(map.get(i.room) ?? []), i]);
     }
+    for (const [room, roomItems] of map) {
+      map.set(
+        room,
+        [...roomItems].sort((a, b) => {
+          const statusDiff = STATUS_SORT_RANK[a.status] - STATUS_SORT_RANK[b.status];
+          if (statusDiff !== 0) return statusDiff;
+
+          const updatedA = new Date(a.updated_at).getTime();
+          const updatedB = new Date(b.updated_at).getTime();
+          return sortDir === "asc" ? updatedA - updatedB : updatedB - updatedA;
+        }),
+      );
+    }
     return map;
-  }, [filtered]);
+  }, [filtered, sortDir]);
 
   const decidedPurchasedTotals = useMemo(() => {
     // Sum across ALL items (not filtered), so you can always see the true committed budget.
@@ -404,25 +427,14 @@ export default function ItemsApp() {
 
         <div className="flex items-end gap-2 lg:col-span-5">
           <div>
-            <label className="text-xs text-slate-600">排序</label>
-            <select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as any)}
-              className="mt-1 rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="updated_at">更新時間</option>
-              <option value="price">價格</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-slate-600">方向</label>
+            <label className="text-xs text-slate-600">同狀態排序</label>
             <select
               value={sortDir}
-              onChange={(e) => setSortDir(e.target.value as any)}
+              onChange={(e) => setSortDir(toSortDir(e.target.value))}
               className="mt-1 rounded-md border px-3 py-2 text-sm"
             >
-              <option value="desc">新→舊 / 高→低</option>
-              <option value="asc">舊→新 / 低→高</option>
+              <option value="desc">更新時間：新→舊</option>
+              <option value="asc">更新時間：舊→新</option>
             </select>
           </div>
           <button

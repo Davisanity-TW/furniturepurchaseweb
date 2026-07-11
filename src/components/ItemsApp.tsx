@@ -189,6 +189,18 @@ export default function ItemsApp() {
     return totals;
   }, [items]);
 
+  const purchasedTotals = useMemo(() => {
+    // Sum across ALL purchased items (not filtered).
+    const totals = new Map<string, number>();
+    for (const i of items) {
+      if (i.status !== "purchased") continue;
+      if (i.price == null) continue;
+      const c = i.currency || "TWD";
+      totals.set(c, (totals.get(c) ?? 0) + Number(i.price));
+    }
+    return totals;
+  }, [items]);
+
   const decidedWantTotals = useMemo(() => {
     // Sum across ALL items (not filtered): decided + want
     const totals = new Map<string, number>();
@@ -609,7 +621,7 @@ export default function ItemsApp() {
         <section className="rounded-xl border bg-white p-4 text-sm shadow-sm">
           <div className="font-medium text-slate-800">已決定 / 想買（加總）</div>
 
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <div className="mt-3 grid gap-4 lg:grid-cols-3">
             <div>
               <div className="text-sm font-medium text-slate-800">已決定 + 已購買（加總）</div>
               <div className="mt-1 text-slate-600">
@@ -627,6 +639,26 @@ export default function ItemsApp() {
               </div>
               <div className="mt-2 text-xs text-slate-500">
                 註：僅加總狀態為「已決定 / 已購買」且有填價格的項目。
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-slate-800">已購買（加總）</div>
+              <div className="mt-1 text-slate-600">
+                {purchasedTotals.size === 0 ? (
+                  <span>目前沒有可加總的「已購買」價格（可能尚未填價格）。</span>
+                ) : (
+                  <ul className="list-disc pl-5">
+                    {Array.from(purchasedTotals.entries()).map(([currency, total]) => (
+                      <li key={currency}>
+                        {currency} {new Intl.NumberFormat("zh-TW").format(total)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                註：僅加總狀態為「已購買」且有填價格的項目。
               </div>
             </div>
 

@@ -10,6 +10,7 @@ const STATUSES: { value: ItemStatus; label: string }[] = [
   { value: "decided", label: "已決定" },
   { value: "want", label: "想買" },
   { value: "candidate", label: "候選" },
+  { value: "paused", label: "暫不考慮" },
 ];
 
 const STATUS_SORT_RANK: Record<ItemStatus, number> = {
@@ -17,6 +18,7 @@ const STATUS_SORT_RANK: Record<ItemStatus, number> = {
   decided: 1,
   want: 2,
   candidate: 3,
+  paused: 4,
 };
 
 function statusLabel(s: ItemStatus) {
@@ -33,6 +35,8 @@ function statusClass(s: ItemStatus) {
       return "bg-emerald-100 text-emerald-800"; // 淺綠
     case "purchased":
       return "bg-emerald-700 text-white"; // 深綠
+    case "paused":
+      return "bg-slate-200 text-slate-700";
     default:
       return "bg-slate-100 text-slate-700";
   }
@@ -62,6 +66,9 @@ export default function ItemsApp() {
   const [filterStatuses, setFilterStatuses] = useState<ItemStatus[] | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [hidePausedByRoom, setHidePausedByRoom] = useState<Record<Room, boolean>>(() =>
+    Object.fromEntries(ROOMS.map((room) => [room, true])) as Record<Room, boolean>,
+  );
 
   const [userId, setUserId] = useState<string | null>(null);
   const isAdmin = userId === ADMIN_USER_ID;
@@ -472,12 +479,37 @@ export default function ItemsApp() {
       ) : (
         <div className="space-y-8">
           {ROOMS.map((room) => {
-            const list = grouped.get(room) ?? [];
+            const allRoomItems = grouped.get(room) ?? [];
+            const hidePaused = hidePausedByRoom[room] ?? true;
+            const list = hidePaused
+              ? allRoomItems.filter((i) => i.status !== "paused")
+              : allRoomItems;
             return (
               <section key={room} className="rounded-xl border bg-white p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-base font-semibold">{room}</h2>
-                  <span className="text-xs text-slate-500">{list.length} 項</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={hidePaused}
+                        onChange={(e) =>
+                          setHidePausedByRoom((prev) => ({
+                            ...prev,
+                            [room]: e.target.checked,
+                          }))
+                        }
+                      />
+                      隱藏暫不考慮物品
+                    </label>
+                    <span className="text-xs text-slate-500">
+                      {list.length} 項
+                      {hidePaused && allRoomItems.length !== list.length
+                        ? `（已隱藏 ${allRoomItems.length - list.length} 項）`
+                        : ""}
+                    </span>
+                  </div>
                 </div>
 
                 {list.length === 0 ? (

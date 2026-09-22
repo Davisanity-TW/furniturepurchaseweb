@@ -25,7 +25,7 @@ alter table public.items
 
 alter table public.items
   add constraint items_status_check
-  check (status in ('candidate', 'want', 'decided', 'purchased'));
+  check (status in ('candidate', 'want', 'decided', 'purchased', 'paused'));
 
 -- Optional: room constraint (can extend later)
 alter table public.items

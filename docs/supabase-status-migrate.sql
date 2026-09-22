@@ -1,5 +1,5 @@
 -- Furniture Purchase Web: migrate item.status values
--- Target statuses: candidate / want / decided / purchased
+-- Target statuses: candidate / want / decided / purchased / paused
 
 begin;
 
@@ -12,7 +12,7 @@ where status = 'eliminated';
 alter table public.items drop constraint if exists items_status_check;
 alter table public.items
   add constraint items_status_check
-  check (status in ('candidate', 'want', 'decided', 'purchased'));
+  check (status in ('candidate', 'want', 'decided', 'purchased', 'paused'));
 
 -- 3) Optional: set default to 'candidate'
 alter table public.items alter column status set default 'candidate';

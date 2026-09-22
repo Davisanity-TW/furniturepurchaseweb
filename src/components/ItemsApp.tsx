@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Item, ItemStatus, Room } from "@/lib/types";
 import { ADMIN_USER_ID, getSupabaseClient } from "@/lib/supabaseClient";
 
-const ROOMS: Room[] = ["客廳", "廚房", "電腦房", "小房間", "主臥室", "浴室"];
+const ROOMS: Room[] = ["全區域", "客廳", "廚房", "電腦房", "小房間", "主臥室", "浴室"];
 const STATUSES: { value: ItemStatus; label: string }[] = [
   { value: "purchased", label: "已購買" },
   { value: "decided", label: "已決定" },
@@ -227,7 +227,7 @@ export default function ItemsApp() {
     if (!supabase) return;
 
     // 1) Upload image first (optional)
-    let image_path: string | null | undefined = payload.image_path as any;
+    let image_path: Item["image_path"] | undefined = payload.image_path;
     if (pendingImageFile) {
       const ext = pendingImageFile.name.split(".").pop() || "jpg";
       const path = `${crypto.randomUUID()}.${ext}`;
@@ -338,7 +338,7 @@ export default function ItemsApp() {
           <label className="text-xs text-slate-600">空間</label>
           <select
             value={filterRoom}
-            onChange={(e) => setFilterRoom(e.target.value as any)}
+            onChange={(e) => setFilterRoom(e.target.value as Room | "all")}
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
           >
             <option value="all">全部</option>
@@ -788,8 +788,8 @@ function EditDialog({
           </Field>
           <Field label="空間" required>
             <select
-              value={(form.room as any) ?? "客廳"}
-              onChange={(e) => setForm((p) => ({ ...p, room: e.target.value as any }))}
+              value={form.room ?? "客廳"}
+              onChange={(e) => setForm((p) => ({ ...p, room: e.target.value as Room }))}
               className="w-full rounded-md border px-3 py-2 text-sm"
             >
               {ROOMS.map((r) => (
@@ -801,8 +801,8 @@ function EditDialog({
           </Field>
           <Field label="狀態" required>
             <select
-              value={(form.status as any) ?? "want"}
-              onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as any }))}
+              value={form.status ?? "want"}
+              onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as ItemStatus }))}
               className="w-full rounded-md border px-3 py-2 text-sm"
             >
               {STATUSES.map((s) => (
@@ -897,7 +897,7 @@ function EditDialog({
                 return;
               }
 
-              const payload: any = {
+              const payload: Partial<Item> & { id?: string } = {
                 id: item?.id,
                 name: form.name,
                 category: form.category,

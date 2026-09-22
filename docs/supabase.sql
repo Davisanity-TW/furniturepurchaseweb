@@ -33,7 +33,7 @@ alter table public.items
 
 alter table public.items
   add constraint items_room_check
-  check (room in ('客廳','廚房','電腦房','小房間','主臥室','浴室'));
+  check (room in ('全區域','客廳','廚房','電腦房','小房間','主臥室','浴室'));
 
 -- 2) updated_at trigger
 create or replace function public.set_updated_at()

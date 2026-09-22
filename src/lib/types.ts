@@ -1,6 +1,7 @@
 export type ItemStatus = "candidate" | "want" | "decided" | "purchased";
 
 export type Room =
+  | "全區域"
   | "客廳"
   | "廚房"
   | "電腦房"

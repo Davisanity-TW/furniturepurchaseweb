@@ -94,8 +94,8 @@ export default function LoginPage() {
                 if (error) throw error;
 
                 window.location.href = "/items";
-              } catch (err: any) {
-                setError(err?.message ?? String(err));
+              } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : String(err));
               } finally {
                 setLoading(false);
               }
